@@ -1,6 +1,6 @@
 pub mod websocket_server {
     use std::net::TcpListener;
-    use std::sync::mpsc::{Sender, Receiver};
+    use std::sync::mpsc::{Receiver, Sender};
     use std::thread;
     use tungstenite::protocol::Message;
 
@@ -12,11 +12,11 @@ pub mod websocket_server {
                     Ok(ws) => {
                         println!("New WebSocket connection");
                         ws
-                    },
+                    }
                     Err(e) => {
                         println!("Error during WebSocket handshake: {}", e);
                         return;
-                    },
+                    }
                 };
 
                 println!("WebSocket connection established");
@@ -31,11 +31,11 @@ pub mod websocket_server {
                             if msg.is_text() || msg.is_binary() {
                                 tx_ws.send(msg.into_data()).expect("Failed to send message");
                             }
-                        },
+                        }
                         Err(e) => {
                             println!("Error reading WebSocket message: {}", e);
                             break;
-                        },
+                        }
                     };
                     println!("WebSocket message received");
                     // Sending USB read data to the WebSocket
@@ -45,7 +45,7 @@ pub mod websocket_server {
                                 println!("Error sending WebSocket message: {}", e);
                                 break;
                             }
-                        },
+                        }
                         Err(_) => (),
                     }
                 }

@@ -3,17 +3,15 @@
     windows_subsystem = "windows"
 )]
 
-use std::thread;
-use std::sync::{mpsc, Arc, Mutex};
-use std::io;
 use ctrlc;
+use std::io;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc, Mutex};
+use std::thread;
 mod usb_comm;
 use usb_comm::usb_comm::UsbComm;
 mod websocket_server;
 use crate::websocket_server::websocket_server::start_websocket_server;
-// Import websocket.rs
-mod websocket;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -36,7 +34,8 @@ async fn main() -> io::Result<()> {
     ctrlc::set_handler(move || {
         r.store(false, Ordering::SeqCst);
         println!("Caught Ctrl+C, stopping...");
-    }).expect("Error setting Ctrl-C handler");
+    })
+    .expect("Error setting Ctrl-C handler");
 
     println!("Running... Press Ctrl+C to stop.");
 
@@ -47,13 +46,13 @@ async fn main() -> io::Result<()> {
                 let mut usb_comm = usb_comm.lock().unwrap();
                 usb_comm.send_data(data);
             }
-    
+
             let mut usb_comm = usb_comm.lock().unwrap();
             if let Some(data) = usb_comm.receive_data() {
                 usb_tx.send(data).unwrap();
-            } 
+            }
         }
-     
+
         println!("Gracefully shut down");
         let mut usb_comm = u.lock().unwrap();
         usb_comm.stop();
@@ -68,7 +67,6 @@ async fn main() -> io::Result<()> {
 
     Ok(())
 }
-
 
 /*#![cfg_attr(
     all(not(debug_assertions), target_os = "windows"),
@@ -95,5 +93,5 @@ async fn main() {
         .expect("error while running tauri application");
 
     // Print hello world to console
-} 
+}
 */
