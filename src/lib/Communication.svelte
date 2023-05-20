@@ -1,0 +1,95 @@
+<script context="module">
+  import * as protobuf from "protobufjs";
+
+  let JogMessage;
+  let socket;
+
+  protobuf.load("src/protobuf/jog_message.proto", function (err, root) {
+    if (err) throw err;
+    JogMessage = root.lookupType("Jog");
+  });
+
+  export function jog_x_plus() {
+    let message = JogMessage.create({ axis: JogMessage.Axis.X, direction: 1 });
+    let buffer = JogMessage.encode(message).finish();
+    socket.send(buffer);
+  }
+
+  export function jog_x_minus() {
+    let message = JogMessage.create({ axis: JogMessage.Axis.X, direction: -1 });
+    let buffer = JogMessage.encode(message).finish();
+    socket.send(buffer);
+  }
+
+  export function jog_y_plus() {
+    let message = JogMessage.create({ axis: JogMessage.Axis.Y, direction: 1 });
+    let buffer = JogMessage.encode(message).finish();
+    socket.send(buffer);
+  }
+
+  export function jog_y_minus() {
+    let message = JogMessage.create({ axis: JogMessage.Axis.Y, direction: -1 });
+    let buffer = JogMessage.encode(message).finish();
+    socket.send(buffer);
+  }
+
+  export function jog_z_plus() {
+    let message = JogMessage.create({ axis: JogMessage.Axis.Z, direction: 1 });
+    let buffer = JogMessage.encode(message).finish();
+    socket.send(buffer);
+  }
+
+  export function jog_z_minus() {
+    let message = JogMessage.create({ axis: JogMessage.Axis.Z, direction: -1 });
+    let buffer = JogMessage.encode(message).finish();
+    socket.send(buffer);
+  }
+</script>
+
+<script>
+  import { onMount } from "svelte";
+  import { move_cube } from "./Toolpath.svelte";
+
+  let x = 0;
+  let y = 0;
+  let z = 0;
+
+  function connectWebSocket() {
+    socket = new WebSocket("ws://localhost:8081/ws");
+
+    socket.addEventListener("message", (event) => {
+      const data = JSON.parse(event.data);
+      x = data.x;
+      y = data.y;
+      z = data.z;
+      // Call move_cube function in Toolpath.svelte
+      move_cube(x, y, z);
+    });
+
+    socket.addEventListener("open", () => {
+      console.log("WebSocket connected");
+    });
+
+    socket.addEventListener("close", () => {
+      console.log("WebSocket disconnected");
+      // Reconnect after a delay
+      setTimeout(() => {
+        connectWebSocket();
+      }, 3000); // 3 seconds
+    });
+
+    socket.addEventListener("error", (error) => {
+      console.error("WebSocket error:", error);
+    });
+  }
+
+  onMount(() => {
+    connectWebSocket();
+  });
+</script>
+
+<div>
+  <p>
+    X: {x.toFixed(3)} Y: {y.toFixed(3)} Z: {z.toFixed(3)}
+  </p>
+</div>

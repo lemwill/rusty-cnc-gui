@@ -1,1 +1,2 @@
-# rusty-cnc-gui
+pnpm install
+pnmp tauri dev
