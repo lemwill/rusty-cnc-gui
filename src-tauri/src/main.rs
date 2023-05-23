@@ -38,11 +38,11 @@ async fn main() -> io::Result<()> {
         let _ = start_websocket_server(ws_tx, usb_rx);
         while running.load(Ordering::SeqCst) {
             if let Ok(data) = ws_rx.try_recv() {
-                let mut usb_comm = usb_comm.lock().unwrap();
+                let usb_comm = usb_comm.lock().unwrap();
                 usb_comm.send_data(data);
             }
 
-            let mut usb_comm = usb_comm.lock().unwrap();
+            let usb_comm = usb_comm.lock().unwrap();
             if let Some(data) = usb_comm.receive_data() {
                 usb_tx.send(data).unwrap();
             }

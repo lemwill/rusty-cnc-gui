@@ -1,4 +1,3 @@
-use super::*;
 use rusb::UsbContext;
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
