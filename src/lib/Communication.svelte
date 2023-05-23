@@ -3,10 +3,12 @@
 
   let JogMessage;
   let socket;
+  let PositionMessage;
 
   protobuf.load("src/protobuf/jog_message.proto", function (err, root) {
     if (err) throw err;
     JogMessage = root.lookupType("Jog");
+    PositionMessage = root.lookupType("Status");
   });
 
   export function jog_x_plus() {
@@ -58,12 +60,19 @@
     socket = new WebSocket("ws://localhost:8081/ws");
 
     socket.addEventListener("message", (event) => {
-      const data = JSON.parse(event.data);
-      x = data.x;
-      y = data.y;
-      z = data.z;
+      let buffer = new Uint8Array(event.data);
+      let decodedMessage = PositionMessage.decode(buffer);
+
+      console.log(decodedMessage);
+      console.log(`Data length: ${buffer.length}`);
+      // Print event.data, byte by byte
+      // log the data length
+
+      // Log position
+      console.log(position);
+
       // Call move_cube function in Toolpath.svelte
-      move_cube(x, y, z);
+      move_cube(data.x, data.y, data.z);
     });
 
     socket.addEventListener("open", () => {

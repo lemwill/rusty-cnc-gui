@@ -13,11 +13,6 @@ use usb_comm::usb_comm::UsbComm;
 mod websocket_server;
 use crate::websocket_server::websocket_server::start_websocket_server;
 
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}!", name)
-}
-
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let (ws_tx, ws_rx) = mpsc::channel(); // Channel for WebSocket to USB
@@ -59,7 +54,6 @@ async fn main() -> io::Result<()> {
     });
 
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 
@@ -67,31 +61,3 @@ async fn main() -> io::Result<()> {
 
     Ok(())
 }
-
-/*#![cfg_attr(
-    all(not(debug_assertions), target_os = "windows"),
-    windows_subsystem = "windows"
-)]
-
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}!", name)
-}
-use log::*;
-
-// Import websocket.rs
-mod websocket;
-use websocket::start_websocket_server;
-
-#[tokio::main]
-async fn main() {
-    println!("Hello, world!");
-
-    tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-
-    // Print hello world to console
-}
-*/
