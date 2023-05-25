@@ -11,41 +11,18 @@
     PositionMessage = root.lookupType("Status");
   });
 
-  export function jog_x_plus() {
-    let message = JogMessage.create({ axis: JogMessage.Axis.X, direction: 1 });
+  const jog = (axis, direction) => {
+    let message = JogMessage.create({ axis, direction });
     let buffer = JogMessage.encode(message).finish();
     socket.send(buffer);
-  }
+  };
 
-  export function jog_x_minus() {
-    let message = JogMessage.create({ axis: JogMessage.Axis.X, direction: -1 });
-    let buffer = JogMessage.encode(message).finish();
-    socket.send(buffer);
-  }
-
-  export function jog_y_plus() {
-    let message = JogMessage.create({ axis: JogMessage.Axis.Y, direction: 1 });
-    let buffer = JogMessage.encode(message).finish();
-    socket.send(buffer);
-  }
-
-  export function jog_y_minus() {
-    let message = JogMessage.create({ axis: JogMessage.Axis.Y, direction: -1 });
-    let buffer = JogMessage.encode(message).finish();
-    socket.send(buffer);
-  }
-
-  export function jog_z_plus() {
-    let message = JogMessage.create({ axis: JogMessage.Axis.Z, direction: 1 });
-    let buffer = JogMessage.encode(message).finish();
-    socket.send(buffer);
-  }
-
-  export function jog_z_minus() {
-    let message = JogMessage.create({ axis: JogMessage.Axis.Z, direction: -1 });
-    let buffer = JogMessage.encode(message).finish();
-    socket.send(buffer);
-  }
+  export const jog_x_plus = () => jog(JogMessage.Axis.X, 1);
+  export const jog_x_minus = () => jog(JogMessage.Axis.X, -1);
+  export const jog_y_plus = () => jog(JogMessage.Axis.Y, 1);
+  export const jog_y_minus = () => jog(JogMessage.Axis.Y, -1);
+  export const jog_z_plus = () => jog(JogMessage.Axis.Z, 1);
+  export const jog_z_minus = () => jog(JogMessage.Axis.Z, -1);
 </script>
 
 <script>
@@ -56,45 +33,49 @@
   let y = 0;
   let z = 0;
 
+  const handleWebSocketMessage = (event) => {
+    if (event.data instanceof Blob) {
+      let fileReader = new FileReader();
+      fileReader.onload = function () {
+        let arrayBuffer = this.result,
+          byteArray = new Uint8Array(arrayBuffer);
+        let decodedMessage = PositionMessage.decode(byteArray);
+        console.log(decodedMessage);
+        x = decodedMessage.position.x;
+        y = decodedMessage.position.y;
+        z = decodedMessage.position.z;
+        move_cube(
+          decodedMessage.position.x,
+          decodedMessage.position.y,
+          decodedMessage.position.z
+        );
+      };
+      fileReader.readAsArrayBuffer(event.data);
+    } else {
+      console.log("Data is not in Blob format.");
+    }
+  };
+
   function connectWebSocket() {
+    console.log("Connecting to WebSocket");
     socket = new WebSocket("ws://localhost:8081/ws");
 
-    socket.addEventListener("message", (event) => {
-      let buffer = new Uint8Array(event.data);
-      let decodedMessage = PositionMessage.decode(buffer);
+    socket.addEventListener("message", handleWebSocketMessage);
 
-      console.log(decodedMessage);
-      console.log(`Data length: ${buffer.length}`);
-      // Print event.data, byte by byte
-      // log the data length
-
-      // Log position
-      console.log(position);
-
-      // Call move_cube function in Toolpath.svelte
-      move_cube(data.x, data.y, data.z);
-    });
-
-    socket.addEventListener("open", () => {
-      console.log("WebSocket connected");
-    });
+    socket.addEventListener("open", () => console.log("WebSocket connected"));
 
     socket.addEventListener("close", () => {
       console.log("WebSocket disconnected");
       // Reconnect after a delay
-      setTimeout(() => {
-        connectWebSocket();
-      }, 3000); // 3 seconds
+      setTimeout(connectWebSocket, 3000); // 3 seconds
     });
 
-    socket.addEventListener("error", (error) => {
-      console.error("WebSocket error:", error);
-    });
+    socket.addEventListener("error", (error) =>
+      console.error("WebSocket error:", error)
+    );
   }
 
-  onMount(() => {
-    connectWebSocket();
-  });
+  onMount(connectWebSocket);
 </script>
 
 <div>

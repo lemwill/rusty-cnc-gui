@@ -2,62 +2,47 @@
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
+mod common;
+mod usb;
+mod websocket;
 
-use ctrlc;
-use std::io;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{mpsc, Arc, Mutex};
-use std::thread;
-mod usb_comm;
-use usb_comm::usb_comm::UsbComm;
-mod websocket_server;
-use crate::websocket_server::websocket_server::start_websocket_server;
+use common::{Channels, Data};
+use tokio::sync::mpsc::unbounded_channel;
+use tokio::task;
 
 #[tokio::main]
-async fn main() -> io::Result<()> {
-    let (ws_tx, ws_rx) = mpsc::channel(); // Channel for WebSocket to USB
-    let (usb_tx, usb_rx) = mpsc::channel(); // Channel for USB to WebSocket
+async fn main() -> Result<(), Box<dyn std::error::Error + Send>> {
+    let (usb_to_ws_tx, mut usb_to_ws_rx) = unbounded_channel::<Data>();
+    let (ws_to_usb_tx, mut ws_to_usb_rx) = unbounded_channel::<Data>();
 
-    let vendor_id = 0xc0de; // replace with your vendor ID
-    let product_id = 0xcafe; // replace with your product ID
-    let usb_comm = Arc::new(Mutex::new(UsbComm::new(vendor_id, product_id)));
+    let usb_channels = Channels {
+        usb_to_ws: usb_to_ws_tx.clone(),
+        ws_to_usb: ws_to_usb_tx.clone(),
+    };
 
-    let running = Arc::new(AtomicBool::new(true));
-    let r = running.clone();
-    let u = Arc::clone(&usb_comm);
+    let ws_channels = Channels {
+        usb_to_ws: usb_to_ws_tx,
+        ws_to_usb: ws_to_usb_tx,
+    };
 
-    ctrlc::set_handler(move || {
-        r.store(false, Ordering::SeqCst);
-        println!("Caught Ctrl+C, stopping...");
-    })
-    .expect("Error setting Ctrl-C handler");
+    let vendor_id = 0xc0de; // replace with your vendor id
+    let product_id = 0xcafe; // replace with your product id
 
-    println!("Running... Press Ctrl+C to stop.");
-
-    let ws_server_thread = thread::spawn(move || {
-        let _ = start_websocket_server(ws_tx, usb_rx);
-        while running.load(Ordering::SeqCst) {
-            if let Ok(data) = ws_rx.try_recv() {
-                let usb_comm = usb_comm.lock().unwrap();
-                usb_comm.send_data(data);
-            }
-
-            let usb_comm = usb_comm.lock().unwrap();
-            if let Some(data) = usb_comm.receive_data() {
-                usb_tx.send(data).unwrap();
-            }
-        }
-
-        println!("Gracefully shut down");
-        let mut usb_comm = u.lock().unwrap();
-        usb_comm.stop();
-    });
+    // Start the USB and WebSocket handlers
+    let usb_handle = task::spawn(usb::handle_usb(
+        usb_channels,
+        ws_to_usb_rx,
+        vendor_id,
+        product_id,
+    ));
+    let ws_handle = task::spawn(websocket::handle_websocket(ws_channels, usb_to_ws_rx));
 
     tauri::Builder::default()
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 
-    ws_server_thread.join().unwrap();
+    // Wait for both handlers to complete
+    let _ = tokio::try_join!(usb_handle, ws_handle);
 
     Ok(())
 }

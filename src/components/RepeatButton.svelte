@@ -7,7 +7,7 @@
   function handleMousedown() {
     if (onRepeat) {
       onRepeat();
-      intervalId = setInterval(onRepeat, 100);
+      intervalId = setInterval(onRepeat, 30);
     }
   }
 
