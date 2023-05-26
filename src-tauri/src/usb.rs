@@ -35,6 +35,7 @@ pub async fn handle_usb(
             tokio::select! {
                 Some(data) = usb_rx.recv() => {
                     // Send the data to the device
+                    println!("Sending data to device {:?}", data);
                     match device.write_interrupt(1, &data.data, std::time::Duration::from_millis(1)) {
                         Ok(_) => println!("Sent data to device"),
                         Err(_) => {

@@ -4,16 +4,23 @@
   let JogMessage;
   let socket;
   let PositionMessage;
+  let MessageFromInterface;
+  let MessageFromCnc;
 
   protobuf.load("src/protobuf/jog_message.proto", function (err, root) {
     if (err) throw err;
     JogMessage = root.lookupType("Jog");
+    MessageFromInterface = root.lookupType("MessageFromInterface");
+    MessageFromCnc = root.lookupType("MessageFromCnc");
     PositionMessage = root.lookupType("Status");
   });
 
   const jog = (axis, direction) => {
-    let message = JogMessage.create({ axis, direction });
-    let buffer = JogMessage.encode(message).finish();
+    let message = MessageFromInterface.create({
+      jog: JogMessage.create({ axis, direction }),
+    });
+    //let message = JogMessage.create({ axis, direction });
+    let buffer = MessageFromInterface.encode(message).finish();
     socket.send(buffer);
   };
 
@@ -39,15 +46,15 @@
       fileReader.onload = function () {
         let arrayBuffer = this.result,
           byteArray = new Uint8Array(arrayBuffer);
-        let decodedMessage = PositionMessage.decode(byteArray);
+        let decodedMessage = MessageFromCnc.decode(byteArray);
         console.log(decodedMessage);
-        x = decodedMessage.position.x;
-        y = decodedMessage.position.y;
-        z = decodedMessage.position.z;
+        x = decodedMessage.status.position.x;
+        y = decodedMessage.status.position.y;
+        z = decodedMessage.status.position.z;
         move_cube(
-          decodedMessage.position.x,
-          decodedMessage.position.y,
-          decodedMessage.position.z
+          decodedMessage.status.position.x,
+          decodedMessage.status.position.y,
+          decodedMessage.status.position.z
         );
       };
       fileReader.readAsArrayBuffer(event.data);

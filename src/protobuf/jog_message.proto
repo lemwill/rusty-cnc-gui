@@ -51,6 +51,7 @@ message Feedrate {
 message MessageFromCnc {
   oneof message {
     Status status = 1;
+    Configuration configuration = 2;
   }
 }
 
