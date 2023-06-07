@@ -2,6 +2,18 @@ syntax = "proto3";
 
 package messages_proto;
 
+import "../../node_modules/protobufjs/google/protobuf/descriptor.proto";
+
+
+extend google.protobuf.FieldOptions {
+   optional string description = 50000;
+   optional int32 min = 50001;
+   optional int32 max = 50002;
+}
+
+
+
+
 // From Interface =================================================
 message MessageFromInterface {
   oneof message {
@@ -22,27 +34,28 @@ message Jog {
   int32 direction = 2;
 }
 
+
+message General {
+  int32 junction_deviation = 1 [(description) = "Maximum acceptable deviation during hard corner rounding (mm). This is a theoretical deviation to calculate the maximum junction speed. The machine will not actually deviate from the path."];
+}
+
+message Limits {
+  bool invert_limit_x = 1 [(description) = "X Machine Dimension (mm)"];
+  bool invert_limit_y = 2 [(description) = "Y Machine Dimension (mm)"];
+  bool invert_limit_z = 3 [(description) = "Z Machine Dimension (mm)"];
+}
+
+message Feedrate {
+  double rapid_x_feedrate = 1 [(description) = "X Feedrate during rapid moves (mm/s)", (min) = 1, (max) = 3];
+  double rapid_y_feedrate = 2 [(description) = "Y Feedrate during rapid moves (mm/s)", (min) = 1, (max) = 3];
+  double rapid_z_feedrate = 3 [(description) = "Z Feedrate during rapid moves (mm/s)", (min) = 1, (max) = 3];
+}
+
 // Configuration Message
 message Configuration {
   General general = 1;
   Limits limits = 2;
   Feedrate feedrate = 3;
-}
-
-message General {
-  int32 junction_deviation = 1;
-}
-
-message Limits {
-  bool invert_limit_x = 1;
-  bool invert_limit_y = 2;
-  bool invert_limit_z = 3;
-}
-
-message Feedrate {
-  int32 rapid_x_feedrate = 1;
-  int32 rapid_y_feedrate = 2;
-  int32 rapid_z_feedrate = 3;
 }
 
 

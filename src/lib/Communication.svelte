@@ -87,6 +87,8 @@
 
 <div>
   <p>
-    X: {x.toFixed(3)} Y: {y.toFixed(3)} Z: {z.toFixed(3)}
+    <span class="badge variant-filled">X: {x.toFixed(1)}</span>
+    <span class="badge variant-filled">Y: {y.toFixed(1)}</span>
+    <span class="badge variant-filled">Z: {z.toFixed(1)}</span>
   </p>
 </div>

@@ -1,2 +1,2 @@
 pnpm install
-pnmp tauri dev
+pnpm tauri dev
