@@ -4,6 +4,7 @@
 )]
 mod common;
 mod usb;
+mod webserver;
 mod websocket;
 
 use common::{Channels, Data};

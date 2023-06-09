@@ -1,5 +1,5 @@
 use crate::common::{Channels, Data};
-use futures::{SinkExt, StreamExt};
+use futures::{future::join, SinkExt, StreamExt};
 use tokio::net::TcpListener;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio_tungstenite::accept_async;
@@ -13,17 +13,19 @@ pub async fn handle_websocket(
     let listener = TcpListener::bind("localhost:8081").await.unwrap();
 
     loop {
-        // Accept an incoming TCP connection
-        let (stream, _) = listener.accept().await.unwrap();
-        // Convert TCP stream to WebSocket stream
-        let ws_stream = match accept_async(stream).await {
-            Ok(ws_stream) => {
-                println!("New WebSocket connection");
-                ws_stream
-            }
-            Err(e) => {
-                println!("Error during the websocket handshake occurred: {}", e);
-                continue;
+        let ws_stream = loop {
+            // Accept an incoming TCP connection
+            let (stream, _) = listener.accept().await.unwrap();
+            // Convert TCP stream to WebSocket stream
+            match accept_async(stream).await {
+                Ok(ws_stream) => {
+                    println!("New WebSocket connection");
+                    break ws_stream;
+                }
+                Err(e) => {
+                    println!("Error during the websocket handshake occurred: {}", e);
+                    continue;
+                }
             }
         };
 
@@ -32,45 +34,64 @@ pub async fn handle_websocket(
         let ws_to_usb = channels.ws_to_usb.clone();
 
         tokio::spawn(async move {
-            // Listen for new messages
-            while let Some(result) = read.next().await {
-                match result {
-                    Ok(message) => {
-                        if let Message::Binary(data) = message {
-                            // Send the data to the USB handler
-                            match ws_to_usb.send(Data { data }) {
-                                Ok(_) => {}
-                                Err(e) => {
-                                    println!("Error sending data to USB: {}", e);
-                                    break;
+            let (mut ws_tx, mut ws_rx) = futures::channel::mpsc::unbounded::<Data>();
+
+            let read_handle = tokio::spawn(async move {
+                // Listen for new messages
+                while let Some(result) = read.next().await {
+                    match result {
+                        Ok(message) => {
+                            match message {
+                                Message::Binary(data) => {
+                                    // Send the data to the USB handler
+                                    match ws_to_usb.send(Data { data }) {
+                                        Ok(_) => {}
+                                        Err(e) => {
+                                            println!("Error sending data to USB: {}", e);
+                                            break;
+                                        }
+                                    }
                                 }
+                                Message::Ping(ping) => {
+                                    // Send pong message to writer task via channel
+                                    ws_tx
+                                        .unbounded_send(Data { data: ping })
+                                        .expect("Failed to send Pong");
+                                }
+                                _ => {}
                             }
                         }
-                    }
-                    Err(e) => {
-                        println!("Error reading from WebSocket: {}", e);
-                        break;
+                        Err(e) => {
+                            println!("Error reading from WebSocket: {}", e);
+                            break;
+                        }
                     }
                 }
-            }
-        });
+            });
 
-        // Handle websocket data
-        while let Some(data) = ws_rx.recv().await {
-            // Print the data
-            println!("{:?}", data);
-            match write
-                .send(Message::Binary(data.data))
-                .await
-                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)
-            {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("Error occurred: {}", e);
-                    break; // Break out of this loop and accept a new connection
+            let write_handle = tokio::spawn(async move {
+                println!("WebSocket connection established");
+
+                // Handle websocket data
+                while let Some(data) = ws_rx.next().await {
+                    // Print the data
+                    println!("{:?}", data);
+                    match write
+                        .send(Message::Binary(data.data))
+                        .await
+                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)
+                    {
+                        Ok(_) => {}
+                        Err(e) => {
+                            println!("Error occurred: {}", e);
+                            break; // Break out of this loop and accept a new connection
+                        }
+                    };
                 }
-            };
-        }
-        println!("Websocket connection closed");
+            });
+
+            // Wait for both tasks to complete
+            let _ = join(read_handle, write_handle).await;
+        });
     }
 }

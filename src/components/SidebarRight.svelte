@@ -1,18 +1,17 @@
 <script lang="ts">
-  import Communication from "../lib/Communication.svelte";
   import RepeatButton from "../components/RepeatButton.svelte";
-  import {
-    jog_x_plus,
-    jog_x_minus,
-    jog_y_plus,
-    jog_y_minus,
-    jog_z_plus,
-    jog_z_minus,
-  } from "../lib/Communication.svelte";
+  import { jog, JogMessage } from "../lib/socketStore.js";
+  import PositionView from "./PositionView.svelte";
+
+  export const jog_x_plus = () => jog(JogMessage.Axis.X, 1);
+  export const jog_x_minus = () => jog(JogMessage.Axis.X, -1);
+  export const jog_y_plus = () => jog(JogMessage.Axis.Y, 1);
+  export const jog_y_minus = () => jog(JogMessage.Axis.Y, -1);
+  export const jog_z_plus = () => jog(JogMessage.Axis.Z, 1);
+  export const jog_z_minus = () => jog(JogMessage.Axis.Z, -1);
 </script>
 
-<Communication />
-<br />
+<PositionView />
 <div class="grid grid-cols-3 gap-0">
   <div />
   <div>

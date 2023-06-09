@@ -5,6 +5,11 @@
   import { Accordion, AccordionItem } from "@skeletonlabs/skeleton";
   import { LightSwitch } from "@skeletonlabs/skeleton";
   import { SlideToggle } from "@skeletonlabs/skeleton";
+  import {
+    socket,
+    MessageFromInterface,
+    JogMessage,
+  } from "../lib/socketStore.js";
 
   const PROTO_PATH = "src/protobuf/jog_message.proto";
   const PROTO_TYPE = "messages_proto.Configuration";
@@ -93,16 +98,32 @@
     const Configuration = await loadProto();
 
     $sections.forEach((section) => {
+      if (!configuration[section.name]) {
+        configuration[section.name] = {};
+      }
       section.fields.forEach((field) => {
         configuration[section.name][field.name] = field.value;
       });
     });
+    console.log("Configuration", configuration);
 
     const errMsg = Configuration.verify(configuration);
     if (errMsg) throw Error(errMsg);
 
-    const message = Configuration.create(configuration);
-    const buffer = Configuration.encode(message).finish();
+    // Create a MessageFromInterface
+    let sendMsg = MessageFromInterface.create({
+      // ... include other fields if necessary
+      configuration: Configuration.create(configuration),
+    });
+
+    const errMsg2 = MessageFromInterface.verify(sendMsg);
+    if (errMsg2) throw Error(errMsg2);
+
+    // Encode the MessageFromInterface
+    let buffer = MessageFromInterface.encode(sendMsg).finish();
+    console.log("Sending message", sendMsg);
+    // Send the buffer via the WebSocket
+    socket.send(buffer);
   };
 
   const selectField = (section, field) => {

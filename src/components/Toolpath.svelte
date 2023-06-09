@@ -1,4 +1,5 @@
 <script context="module">
+  import { position } from "../lib/socketStore.js";
   let cube;
   let camera;
   let controls;
@@ -11,8 +12,6 @@
     controls.update();
   };
 
-  export const move_cube = (x, y, z) => cube.position.set(x, y, z);
-
   export const point_xy_plane = () => positionCamera(0, 0, 10, [0, 1, 0]);
 
   export const point_xz_plane = () => positionCamera(0, 10, 0, [0, 0, 1]);
@@ -21,12 +20,13 @@
 </script>
 
 <script>
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
   import { throttle } from "lodash-es";
   import * as THREE from "three";
 
   let scene, renderer, gridHelper, controls, axesHelper;
+  let unsubscribe;
 
   const resizeUpdateInterval = 500;
 
@@ -98,6 +98,14 @@
   let el;
   onMount(() => {
     el = createScene();
+
+    unsubscribe = position.subscribe(({ x, y, z }) => {
+      cube.position.set(x, y, z);
+    });
+  });
+
+  onDestroy(() => {
+    unsubscribe();
   });
 </script>
 
